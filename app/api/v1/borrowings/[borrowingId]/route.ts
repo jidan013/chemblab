@@ -119,6 +119,17 @@ export async function PATCH(
               data: { currentStock: { decrement: item.quantity } },
             });
 
+            // Create stock mutation record
+            await tx.stockMutation.create({
+              data: {
+                type: "OUT",
+                quantity: item.quantity,
+                description: `Peminjaman Disetujui - ID: ${borrowing.id}`,
+                chemicalId: item.chemical.id,
+                createdById: userAccess.userId,
+              },
+            });
+
             // Buat usage history untuk seluruh quantity
             usageHistories.push(
               await tx.usageHistory.create({
@@ -227,6 +238,17 @@ export async function PATCH(
               await tx.chemical.update({
                 where: { id: item.chemical.id },
                 data: { currentStock: { increment: returnedQty } },
+              });
+
+              // Create stock mutation record for the return
+              await tx.stockMutation.create({
+                data: {
+                  type: "RETURN",
+                  quantity: returnedQty,
+                  description: `Pengembalian Peminjaman - ID: ${borrowing.id}`,
+                  chemicalId: item.chemical.id,
+                  createdById: userAccess.userId,
+                },
               });
             }
 
