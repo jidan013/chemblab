@@ -49,29 +49,30 @@ export function SDSReports({ data, period, onExport }: SDSReportsProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
             Laporan Safety Data Sheet (SDS)
           </h2>
-          <p className="text-gray-600 mt-1">
+          <p className="mt-1 text-gray-600">
             Analisis dokumen keselamatan dan akses
           </p>
         </div>
         <Button
           onClick={onExport}
-          className="shrink-0 bg-green-700 hover:bg-green-400 text-white">
-          <Download className="mr-2 h-4 w-4" />
+          className="text-white bg-green-700 shrink-0 hover:bg-green-400"
+        >
+          <Download className="w-4 h-4 mr-2" />
           Export Laporan
         </Button>
       </div>
 
       {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Total SDS</CardTitle>
-            <Shield className="h-4 w-4 text-blue-600" />
+            <Shield className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalSDS}</div>
@@ -82,11 +83,11 @@ export function SDSReports({ data, period, onExport }: SDSReportsProps) {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">
               Total Download
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-purple-600" />
+            <TrendingUp className="w-4 h-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalDownloads}</div>
@@ -97,9 +98,9 @@ export function SDSReports({ data, period, onExport }: SDSReportsProps) {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Bahasa</CardTitle>
-            <Languages className="h-4 w-4 text-orange-600" />
+            <Languages className="w-4 h-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -119,29 +120,29 @@ export function SDSReports({ data, period, onExport }: SDSReportsProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div className="p-4 text-center rounded-lg bg-blue-50">
               <div className="text-2xl font-bold text-blue-600">
                 {totalDownloads.toLocaleString()}
               </div>
               <p className="text-sm text-gray-600">Total Download</p>
             </div>
 
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
+            <div className="p-4 text-center rounded-lg bg-purple-50">
               <div className="text-2xl font-bold text-purple-600">
                 {Math.round(avgDownloadsPerSDS)}
               </div>
               <p className="text-sm text-gray-600">Rata-rata per Dokumen</p>
             </div>
 
-            <div className="text-center p-4 bg-green-50 rounded-lg">
+            <div className="p-4 text-center rounded-lg bg-green-50">
               <div className="text-2xl font-bold text-green-600">
                 {currentMonthDownloads}
               </div>
               <p className="text-sm text-gray-600">Download Bulan Ini</p>
             </div>
 
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
+            <div className="p-4 text-center rounded-lg bg-orange-50">
               <div className="text-2xl font-bold text-orange-600">
                 {Math.round(avgMonthlyDownloads)}
               </div>
@@ -160,10 +161,10 @@ export function SDSReports({ data, period, onExport }: SDSReportsProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-6 gap-2 items-end h-40">
+          <div className="grid items-end h-40 grid-cols-6 gap-2">
             {monthlyDownloads.map((month, index) => {
               const maxDownloads = Math.max(
-                ...monthlyDownloads.map((m) => m.downloads)
+                ...monthlyDownloads.map((m) => m.downloads),
               );
               const height =
                 maxDownloads > 0 ? (month.downloads / maxDownloads) * 100 : 0;
@@ -171,10 +172,11 @@ export function SDSReports({ data, period, onExport }: SDSReportsProps) {
               return (
                 <div
                   key={index}
-                  className="flex flex-col items-center space-y-2">
+                  className="flex flex-col items-center space-y-2"
+                >
                   <div className="text-xs text-gray-600">{month.month}</div>
                   <div
-                    className="w-full bg-purple-200 rounded-t transition-all duration-300"
+                    className="w-full transition-all duration-300 bg-purple-200 rounded-t"
                     style={{ height: `${height}%` }}
                   />
                   <div className="text-xs font-medium">{month.downloads}</div>
@@ -205,9 +207,9 @@ export function SDSReports({ data, period, onExport }: SDSReportsProps) {
                       {count} ({Math.round(percentage)}%)
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full h-2 bg-gray-200 rounded-full">
                     <div
-                      className="bg-blue-600 h-2 rounded-full"
+                      className="h-2 bg-blue-600 rounded-full"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
@@ -221,8 +223,8 @@ export function SDSReports({ data, period, onExport }: SDSReportsProps) {
       {/* Recommendations */}
       <Card className="border-blue-200 bg-blue-50">
         <CardHeader>
-          <CardTitle className="text-blue-800 flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-blue-800">
+            <AlertTriangle className="w-5 h-5" />
             Rekomendasi
           </CardTitle>
         </CardHeader>

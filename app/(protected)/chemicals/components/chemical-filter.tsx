@@ -62,17 +62,17 @@ export const ChemicalFilter = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border">
+    <div className="bg-white border rounded-xl">
       <div className="p-6 space-y-2">
         <span className="text-lg font-semibold">Filter & Pencarian</span>
         <p className="text-sm sm:text-base text-muted-foreground">
           Cari bahan kimia berdasarkan nama bahan atau rumus.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+        <div className="flex flex-col gap-4 mt-4 sm:flex-row">
           {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute w-4 h-4 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
             <Input
               placeholder="Cari nama bahan atau rumus..."
               className="pl-10 placeholder:text-xs sm:placeholder:text-base"
@@ -97,7 +97,8 @@ export const ChemicalFilter = ({
           {/* Filter Sifat */}
           <Select
             value={filterCharacteristic}
-            onValueChange={onFilterCharacteristicChange}>
+            onValueChange={onFilterCharacteristicChange}
+          >
             <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Sifat" />
             </SelectTrigger>
@@ -119,9 +120,10 @@ export const ChemicalFilter = ({
                   <DialogTrigger asChild>
                     <Button
                       variant="outline"
-                      className="bg-blue-700 hover:bg-blue-400 text-white"
-                      disabled={loadingImport}>
-                      <Upload className="mr-2 h-4 w-4" />
+                      className="text-white bg-blue-700 hover:bg-blue-400"
+                      disabled={loadingImport}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
                       {loadingImport ? "Mengimpor..." : "Import Data"}
                     </Button>
                   </DialogTrigger>
@@ -133,7 +135,8 @@ export const ChemicalFilter = ({
                     <div className="space-y-4">
                       <Select
                         value={importForm}
-                        onValueChange={(v) => setImportForm(v)}>
+                        onValueChange={(v) => setImportForm(v)}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Pilih Bentuk" />
                         </SelectTrigger>
@@ -156,7 +159,8 @@ export const ChemicalFilter = ({
                     <DialogFooter>
                       <Button
                         disabled={!importFile}
-                        onClick={handleImportSubmit}>
+                        onClick={handleImportSubmit}
+                      >
                         {loadingImport ? "Mengimpor..." : "Import Data"}
                       </Button>
                     </DialogFooter>
@@ -166,9 +170,10 @@ export const ChemicalFilter = ({
 
               <Button
                 variant="outline"
-                className="bg-green-700 hover:bg-green-400 text-white"
-                onClick={onExport}>
-                <Download className="mr-2 h-4 w-4" />
+                className="text-white bg-green-700 hover:bg-green-400"
+                onClick={onExport}
+              >
+                <Download className="w-4 h-4 mr-2" />
                 Export Excel
               </Button>
             </>

@@ -49,7 +49,7 @@ export function ChemicalReports({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Laporan Inventaris Bahan Kimia</h2>
           <p className="text-gray-600">
@@ -58,20 +58,21 @@ export function ChemicalReports({
         </div>
         <Button
           onClick={onExport}
-          className="shrink-0 bg-green-700 hover:bg-green-400 text-white">
-          <Download className="mr-2 h-4 w-4" />
-          Export Laporan
+          className="text-white bg-green-700 shrink-0 hover:bg-green-400"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Export Laporans
         </Button>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">
               Total Bahan Kimia
             </CardTitle>
-            <Package className="h-4 w-4 text-blue-600" />
+            <Package className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.totalChemicals}</div>
@@ -83,9 +84,9 @@ export function ChemicalReports({
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Stok Rendah</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertTriangle className="w-4 h-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
@@ -93,7 +94,7 @@ export function ChemicalReports({
             </div>
             <div className="text-xs text-muted-foreground">
               {((data.lowStockChemicals / data.totalChemicals) * 100).toFixed(
-                1
+                1,
               )}
               % dari total
             </div>
@@ -101,9 +102,9 @@ export function ChemicalReports({
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Kadaluwarsa</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertTriangle className="w-4 h-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
@@ -116,11 +117,11 @@ export function ChemicalReports({
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">
               Penggunaan Bulan Ini
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <TrendingUp className="w-4 h-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{currentMonthUsage.usage}</div>
@@ -133,7 +134,7 @@ export function ChemicalReports({
       </div>
 
       {/* Distribution Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* By Form Distribution */}
         <Card>
           <CardHeader>
@@ -175,7 +176,8 @@ export function ChemicalReports({
                 ([characteristic, count]) => (
                   <div
                     key={characteristic}
-                    className="flex items-center justify-between">
+                    className="flex items-center justify-between"
+                  >
                     <span className="text-sm">{characteristic}</span>
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{count}</span>
@@ -184,7 +186,7 @@ export function ChemicalReports({
                       </span>
                     </div>
                   </div>
-                )
+                ),
               )}
             </div>
           </CardContent>
@@ -205,7 +207,8 @@ export function ChemicalReports({
               (chemical: TopUsedChemical, index: number) => (
                 <div
                   key={`${chemical.name}-${index}`}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+                >
                   <div className="flex-1">
                     <div className="font-medium">{chemical.name}</div>
                     <div className="text-sm text-gray-500">
@@ -219,14 +222,14 @@ export function ChemicalReports({
                     <div className="text-sm text-gray-500">#{index + 1}</div>
                   </div>
                 </div>
-              )
+              ),
             )}
           </div>
         </CardContent>
       </Card>
 
       {/* Health Indicators */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-green-700">Kesehatan Stok</CardTitle>
@@ -288,7 +291,8 @@ export function ChemicalReports({
             {data.monthlyUsage.map((monthData: MonthlyUsage, index: number) => (
               <div
                 key={monthData.month}
-                className="flex items-center justify-between">
+                className="flex items-center justify-between"
+              >
                 <span className="text-sm font-medium">{monthData.month}</span>
                 <div className="flex items-center gap-4">
                   <span className="font-bold">{monthData.usage}</span>
@@ -298,7 +302,8 @@ export function ChemicalReports({
                         monthData.usage > data.monthlyUsage[index - 1].usage
                           ? "text-green-600"
                           : "text-red-600"
-                      }`}>
+                      }`}
+                    >
                       {monthData.usage > data.monthlyUsage[index - 1].usage
                         ? "↑"
                         : "↓"}
