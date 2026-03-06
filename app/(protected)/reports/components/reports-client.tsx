@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 
@@ -36,6 +36,16 @@ import { SDSReports } from "./sds-reports";
 import { OverviewReports } from "./overview-reports";
 import { useReports } from "@/hooks/use-reports";
 
+// export helpers
+import { exportChemicalReportToExcel } from "@/helpers/reports/export-chemical-reports-to-excel";
+import { exportBorrowingReportToExcel } from "@/helpers/reports/export-borrowing-reports-to-excel";
+import { exportSDSReportToExcel } from "@/helpers/reports/export-sds-reports-to-excel";
+import {
+  MonthlyChemicalUsage,
+  exportRecapitulationToExcel,
+} from "@/helpers/reports/export-recapitulation-to-excel";
+import axios from "axios";
+
 interface OverviewStat {
   title: string;
   value: number;
@@ -50,6 +60,12 @@ export function ReportsClient() {
   const [selectedPeriod, setSelectedPeriod] = useState("1 month");
   const [activeTab, setActiveTab] = useState("overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(
+    format(new Date(), "MMMM"),
+  );
+  const [selectedYear, setSelectedYear] = useState(
+    format(new Date(), "yyyy"),
+  );
 
   // ShadCN Date Range
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -94,6 +110,52 @@ export function ReportsClient() {
     setSelectedPeriod(period);
     if (period !== "custom") {
       setDateRange(undefined);
+    }
+  };
+
+  const handleExport = useCallback(() => {
+    if (!reportData) return;
+
+    switch (activeTab) {
+      case "chemicals":
+        exportChemicalReportToExcel(reportData.chemicalStats, selectedPeriod);
+        break;
+      case "borrowings":
+        exportBorrowingReportToExcel(
+          reportData.borrowingStats,
+          selectedPeriod,
+        );
+        break;
+      case "sds":
+        exportSDSReportToExcel(reportData.sdsStats, selectedPeriod);
+        break;
+      default:
+        break;
+    }
+  }, [activeTab, reportData, selectedPeriod]);
+
+  const handleExportAll = useCallback(() => {
+    if (!reportData) return;
+
+    exportChemicalReportToExcel(reportData.chemicalStats, selectedPeriod);
+    exportBorrowingReportToExcel(reportData.borrowingStats, selectedPeriod);
+    exportSDSReportToExcel(reportData.sdsStats, selectedPeriod);
+  }, [reportData, selectedPeriod]);
+
+  const handleExportRecapitulation = async () => {
+    try {
+      const response = await axios.get(
+        `/api/v1/reports/chemicals/monthly-usage?month=${selectedMonth}&year=${selectedYear}`,
+      );
+      const data: MonthlyChemicalUsage[] = response.data;
+      await exportRecapitulationToExcel(
+        data,
+        selectedMonth,
+        parseInt(selectedYear),
+      );
+    } catch (error) {
+      console.error("Failed to export recapitulation", error);
+      alert("Gagal mengekspor rekapitulasi.");
     }
   };
 
@@ -174,7 +236,8 @@ export function ReportsClient() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-[260px] justify-start text-left font-normal">
+                    className="w-[260px] justify-start text-left font-normal"
+                  >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dateRange?.from ? (
                       dateRange.to ? (
@@ -209,17 +272,75 @@ export function ReportsClient() {
                 isRefreshing ||
                 (selectedPeriod === "custom" &&
                   (!dateRange?.from || !dateRange?.to))
-              }>
+              }
+            >
               <RefreshCw
                 className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
               />
               Refresh
             </Button>
 
-            <Button className="bg-green-700 hover:bg-green-600 text-white">
+            <Button
+              className="bg-green-700 hover:bg-green-600 text-white"
+              onClick={handleExportAll}
+            >
               <Download className="mr-2 h-4 w-4" />
               Export Semua
             </Button>
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedMonth}
+                onValueChange={setSelectedMonth}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    "January",
+                    "February",
+                    "March",
+                    "April",
+                    "May",
+                    "June",
+                    "July",
+                    "August",
+                    "September",
+                    "October",
+                    "November",
+                    "December",
+                  ].map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedYear}
+                onValueChange={setSelectedYear}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }, (_, i) =>
+                    (new Date().getFullYear() - i).toString(),
+                  ).map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                className="bg-blue-700 hover:bg-blue-600 text-white"
+                onClick={handleExportRecapitulation}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export Rekapitulasi
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -256,7 +377,7 @@ export function ReportsClient() {
             <ChemicalReports
               data={reportData.chemicalStats}
               period={selectedPeriod}
-              onExport={() => {}}
+              onExport={handleExport}
             />
           </TabsContent>
 
@@ -264,7 +385,7 @@ export function ReportsClient() {
             <BorrowingReports
               data={reportData.borrowingStats}
               period={selectedPeriod}
-              onExport={() => {}}
+              onExport={handleExport}
             />
           </TabsContent>
 
@@ -272,7 +393,7 @@ export function ReportsClient() {
             <SDSReports
               data={reportData.sdsStats}
               period={selectedPeriod}
-              onExport={() => {}}
+              onExport={handleExport}
             />
           </TabsContent>
         </Tabs>

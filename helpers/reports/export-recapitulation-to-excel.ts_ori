@@ -1,0 +1,142 @@
+import ExcelJS from "exceljs";
+
+// Mock data structure - this will need to be replaced with real data
+export interface MonthlyChemicalUsage {
+  chemicalName: string;
+  formula: string;
+  initialStock: number;
+  unit: string;
+  dailyUsage: { [day: number]: number };
+  finalStock: number;
+}
+
+export const exportRecapitulationToExcel = async (
+  data: MonthlyChemicalUsage[],
+  month: string,
+  year: number,
+) => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Rekapitulasi Penggunaan");
+
+  // =========== Title ===========
+  worksheet.mergeCells("A1:AG1");
+  worksheet.getCell("A1").value = "REKAPITULASI PENGGUNAAN BAHAN KIMIA";
+  worksheet.getCell("A1").font = { bold: true, size: 14 };
+  worksheet.getCell("A1").alignment = { horizontal: "center" };
+
+  worksheet.mergeCells("A2:AG2");
+  worksheet.getCell("A2").value = "LABORATORIUM FUNDAMENTAL KIMIA";
+  worksheet.getCell("A2").font = { bold: true, size: 14 };
+  worksheet.getCell("A2").alignment = { horizontal: "center" };
+
+  worksheet.mergeCells("A3:AG3");
+  worksheet.getCell("A3").value =
+    `BULAN ${month.toUpperCase()} TAHUN ${year}`;
+  worksheet.getCell("A3").font = { bold: true, size: 14 };
+  worksheet.getCell("A3").alignment = { horizontal: "center" };
+
+  // =========== Headers ===========
+  const headerRow = worksheet.getRow(5);
+  headerRow.values = [
+    "No.",
+    "Nama Bahan Kimia",
+    "Rumus",
+    "Stock Awal (g) (mL)",
+    "Tanggal Permintaan",
+  ];
+  worksheet.mergeCells("E5:AG5");
+  worksheet.getCell("AH5").value = "Stock Akhir (g) (mL)";
+
+  const daysInMonth = new Date(year, new Date(Date.parse(month +" 1, 2012")).getMonth() + 1, 0).getDate();
+  const dailyHeaders = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  const dailyHeaderRow = worksheet.getRow(6);
+  dailyHeaderRow.values = ["", "", "", "", ...dailyHeaders];
+
+  // Style Headers
+  [worksheet.getRow(5), worksheet.getRow(6)].forEach((row) => {
+    row.font = { bold: true };
+    row.alignment = { horizontal: "center", vertical: "middle" };
+  });
+
+  // Merge Header Cells
+  worksheet.mergeCells("A5:A6");
+  worksheet.mergeCells("B5:B6");
+  worksheet.mergeCells("C5:C6");
+  worksheet.mergeCells("D5:D6");
+  worksheet.mergeCells("AH5:AH6");
+
+  // =========== Data Rows ===========
+  data.forEach((item, index) => {
+    const rowIndex = 7 + index;
+    const dailyUsageValues = dailyHeaders.map(
+      (day) => item.dailyUsage[day] || "",
+    );
+    worksheet.getRow(rowIndex).values = [
+      index + 1,
+      item.chemicalName,
+      item.formula,
+      item.initialStock,
+      ...dailyUsageValues,
+      item.finalStock,
+    ];
+  });
+
+  // =========== Signature ===========
+  const signatureRowIndex = 8 + data.length;
+  worksheet.getCell(`A${signatureRowIndex}`).value = "Mengetahui";
+  worksheet.getCell(`AC${signatureRowIndex}`).value = `Surabaya, ${new Date().toLocaleDateString(
+    "id-ID",
+    { day: "numeric", month: "long", year: "numeric" },
+  )}`;
+
+  worksheet.getCell(`A${signatureRowIndex + 1}`).value =
+    "Sekretaris Departemen Kimia";
+  worksheet.getCell(`AC${signatureRowIndex + 1}`).value = "Petugas Gudang";
+
+  worksheet.getCell(`A${signatureRowIndex + 5}`).value = "Nama (bisa diedit)";
+  worksheet.getCell(`AC${signatureRowIndex + 5}`).value = "Nama (bisa diedit)";
+  worksheet.getCell(`A${signatureRowIndex + 6}`).value = "NIP. (bisa diedit)";
+  worksheet.getCell(`AC${signatureRowIndex + 6}`).value = "NIP. (bisa diedit)";
+
+  // =========== Styling ===========
+  worksheet.columns = [
+    { key: "no", width: 5 },
+    { key: "name", width: 30 },
+    { key: "formula", width: 15 },
+    { key: "initialStock", width: 15 },
+    ...dailyHeaders.map((day) => ({ key: `day${day}`, width: 4 })),
+    { key: "finalStock", width: 15 },
+  ];
+
+  // Borders
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber >= 5) {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+    }
+  });
+
+  // =========== Export ===========
+  try {
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `REKAPITULASI_PENGGUNAAN_BAHAN_KIMIA_${month.toUpperCase()}_${year}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error exporting to Excel:", error);
+    alert("Gagal mengekspor data ke Excel.");
+  }
+};
