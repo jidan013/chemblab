@@ -42,7 +42,7 @@ export const exportSdsToExcel = async (sds: SDS[]) => {
       language: sds.language,
       createdByName: sds.createdByName,
       updatedByName: sds.updatedByName || "-",
-      createdAt: sds.createdAt.toLocaleDateString("id-ID", {
+      createdAt: new Date(sds.createdAt).toLocaleDateString("id-ID", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
@@ -51,7 +51,7 @@ export const exportSdsToExcel = async (sds: SDS[]) => {
         second: "2-digit",
       }),
       updatedAt: sds.updatedAt
-        ? sds.updatedAt.toLocaleDateString("id-ID", {
+        ? new Date(sds.updatedAt).toLocaleDateString("id-ID", {
             day: "2-digit",
             month: "2-digit",
             year: "numeric",
