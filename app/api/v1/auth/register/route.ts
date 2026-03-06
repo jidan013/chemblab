@@ -3,6 +3,7 @@ import { hashPassword, requireRoleOrNull } from "@/lib/auth";
 import db from "@/lib/db";
 import { registerSchema } from "@/lib/validation/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await hashPassword(password);
 
-    const newUser = await db.$transaction(async (tx) => {
+    const newUser = await db.$transaction(async (tx: Prisma.TransactionClient) => {
       const user = await tx.user.create({
         data: {
           email,
