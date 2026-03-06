@@ -3,7 +3,7 @@ import { hashPassword, requireRoleOrNull } from "@/lib/auth";
 import db from "@/lib/db";
 import { registerSchema } from "@/lib/validation/auth";
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
