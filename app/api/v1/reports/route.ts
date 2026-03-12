@@ -5,20 +5,24 @@ import { startOfMonth, endOfMonth, subMonths, format, subDays } from "date-fns";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get("period") || "1month";
+    const periodRaw = searchParams.get("period") || "1month";
+    const period = periodRaw.replace(/\s+/g, "").toLowerCase();
 
     const now = new Date();
     let startDate: Date;
 
     switch (period) {
+      case "1month":
+        startDate = subMonths(now, 1);
+        break;
       case "6months":
-        startDate = subMonths(now, 3);
+        startDate = subMonths(now, 6);
         break;
       case "1year":
         startDate = subMonths(now, 12);
         break;
       default:
-        startDate = subMonths(now, 6);
+        startDate = subMonths(now, 1);
     }
 
     // Get chemical statistics
