@@ -57,7 +57,7 @@ interface OverviewStat {
 }
 
 export function ReportsClient() {
-  const [selectedPeriod, setSelectedPeriod] = useState("1 month");
+  const [selectedPeriod, setSelectedPeriod] = useState("1month");
   const [activeTab, setActiveTab] = useState("overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(
@@ -224,9 +224,9 @@ export function ReportsClient() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1 month">1 Bulan Terakhir</SelectItem>
-                <SelectItem value="6 months">6 Bulan Terakhir</SelectItem>
-                <SelectItem value="1 year">1 Tahun Terakhir</SelectItem>
+                <SelectItem value="1month">1 Bulan Terakhir</SelectItem>
+                <SelectItem value="6months">6 Bulan Terakhir</SelectItem>
+                <SelectItem value="1year">1 Tahun Terakhir</SelectItem>
                 <SelectItem value="custom">Custom Range</SelectItem>
               </SelectContent>
             </Select>
