@@ -3,15 +3,28 @@ import { useCallback, useEffect, useState } from "react";
 import { useDebounce } from "./use-debounce";
 import { useToast } from "./use-toast";
 import axios from "axios";
-import { convertSnakeToCamel } from "@/helpers/case";
 
-const useBorrowings = () => {
+interface UseBorrowingsParams {
+  searchTerm: string;
+  filterStatus: string;
+  filterRole: string;
+}
+
+const useBorrowings = ({
+  searchTerm,
+  filterStatus,
+  filterRole,
+}: UseBorrowingsParams) => {
   const [borrowings, setBorrowings] = useState<Borrowing[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterRole, setFilterRole] = useState("all");
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({
+    PENDING: 0,
+    APPROVED: 0,
+    REJECTED: 0,
+    RETURNED: 0,
+    OVERDUE: 0,
+  });
   const [isDeleting, setIsDeleting] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deletingChemicalId, setDeletingChemicalId] = useState<string | null>(
@@ -42,17 +55,12 @@ const useBorrowings = () => {
           params,
         });
 
-        const borrowingsCamelCase = convertSnakeToCamel<Borrowing[]>(
-          data.formattedBorrowings
-        );
-
-        console.log("Data peminjaman: ", borrowingsCamelCase);
-
-        setBorrowings(borrowingsCamelCase);
-        setTotal(data.pagination.total);
+        setBorrowings(data.formattedBorrowings);
+        setTotal(data.totalFiltered ?? data.pagination.total);
+        setStatusCounts(data.statusCounts);
         setPagination({
           currentPage: data.pagination.page,
-          total: data.pagination.total,
+          total: data.totalFiltered ?? data.pagination.total,
           totalPages: data.pagination.pages,
         });
       } catch (error) {
@@ -68,6 +76,10 @@ const useBorrowings = () => {
     },
     [debouncedSearch, filterRole, filterStatus, toast]
   );
+
+  useEffect(() => {
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  }, [debouncedSearch, filterRole, filterStatus]);
 
   useEffect(() => {
     fetchBorrowings(pagination.currentPage);
@@ -87,18 +99,13 @@ const useBorrowings = () => {
   return {
     borrowings,
     total,
+    statusCounts,
     isLoading,
-    searchTerm,
-    filterStatus,
-    filterRole,
     isDeleting,
     openDeleteModal,
     deletingChemicalId,
     pagination,
     handlePageChange,
-    setSearchTerm,
-    setFilterStatus,
-    setFilterRole,
     setIsDeleting,
     setOpenDeleteModal,
     setDeletingChemicalId,

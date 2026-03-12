@@ -26,50 +26,33 @@ export function BorrowingClient({ user }: BorrowingsClientProps) {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterUser, setFilterUser] = useState("all");
 
-  const { borrowings, pagination, handlePageChange, isLoading } =
-    useBorrowings();
-
-  // Filter borrowings based on user role
-  const userBorrowings =
-    user.role === "MAHASISWA" || user.role === "DOSEN"
-      ? borrowings.filter((b) => b.borrowerId === user.userId)
-      : borrowings;
-
-  // Apply search and filters
-  const filteredBorrowings = userBorrowings.filter((borrowing) => {
-    const matchesSearch =
-      borrowing.borrower.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      borrowing.purpose.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      borrowing.items.some(
-        (item) =>
-          item.chemical.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.chemical.formula.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-    const matchesStatus =
-      filterStatus === "all" || borrowing.status === filterStatus;
-
-    const matchesUser =
-      filterUser === "all" || borrowing.borrower.role === filterUser;
-
-    return matchesSearch && matchesStatus && matchesUser;
-  });
-
-  // Get statistics
-  const stats = {
-    total: userBorrowings.length,
-    pending: userBorrowings.filter((b) => b.status === "PENDING").length,
-    approved: userBorrowings.filter((b) => b.status === "APPROVED").length,
-    overdue: userBorrowings.filter((b) => b.status === "OVERDUE").length,
-    returned: userBorrowings.filter((b) => b.status === "RETURNED").length,
-  };
-
   const canManage =
     user.role === "ADMIN" ||
     user.role === "LABORAN" ||
     user.role === "PETUGAS_GUDANG";
+
+  const serverFilterUser = canManage ? filterUser : "all";
+  const {
+    borrowings,
+    pagination,
+    handlePageChange,
+    isLoading,
+    total,
+    statusCounts,
+  } = useBorrowings({
+    searchTerm,
+    filterStatus,
+    filterRole: serverFilterUser,
+  });
+
+  // Get statistics
+  const stats = {
+    total,
+    pending: statusCounts.PENDING ?? 0,
+    approved: statusCounts.APPROVED ?? 0,
+    overdue: statusCounts.OVERDUE ?? 0,
+    returned: statusCounts.RETURNED ?? 0,
+  };
 
   return (
     <div className="p-4 sm:p-8 space-y-4 sm:space-y-6">
@@ -164,7 +147,7 @@ export function BorrowingClient({ user }: BorrowingsClientProps) {
         setFilterStatus={setFilterStatus}
         filterUser={filterUser}
         setFilterUser={setFilterUser}
-        onExport={() => exportBorrowingsToExcel(filteredBorrowings)}
+        onExport={() => exportBorrowingsToExcel(borrowings)}
         canManage={canManage}
       />
 
@@ -173,8 +156,7 @@ export function BorrowingClient({ user }: BorrowingsClientProps) {
         <CardHeader>
           <CardTitle className="text-lg">Daftar Permintaan</CardTitle>
           <CardDescription>
-            Menampilkan {filteredBorrowings.length} dari {userBorrowings.length}{" "}
-            data permintaan
+            Menampilkan {borrowings.length} dari {total} data permintaan
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -184,7 +166,7 @@ export function BorrowingClient({ user }: BorrowingsClientProps) {
             </div>
           ) : (
             <BorrowingTable
-              borrowings={filteredBorrowings}
+              borrowings={borrowings}
               pagination={pagination}
               onPageChange={handlePageChange}
               userRole={user.role}

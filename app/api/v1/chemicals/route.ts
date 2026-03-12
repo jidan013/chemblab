@@ -6,58 +6,84 @@ import { requireRoleOrNull } from "@/lib/auth";
 export async function GET() {
   try {
     const chemicals = await db.chemical.findMany({
-      include: {
-        createdBy: { include: { admin: true, laboran: true } },
-        updatedBy: { include: { admin: true, laboran: true } },
-        safetyDataSheet: true,
-        borrowings: { include: { borrowing: true } },
-        usageHistory: true,
+      select: {
+        id: true,
+        name: true,
+        formula: true,
+        form: true,
+        characteristic: true,
+        currentStock: true,
+        unit: true,
+        purchaseDate: true,
+        expirationDate: true,
+        createdAt: true,
+        updatedAt: true,
+        createdBy: {
+          select: {
+            role: true,
+            username: true,
+            laboran: { select: { full_name: true } },
+          },
+        },
+        updatedBy: {
+          select: {
+            role: true,
+            username: true,
+            laboran: { select: { full_name: true } },
+          },
+        },
+        safetyDataSheet: { select: { id: true } },
+        _count: {
+          select: {
+            borrowings: true,
+            usageHistory: true,
+          },
+        },
       },
       orderBy: { name: "asc" },
     });
 
-    const formattedChemicals = chemicals.map((chemical) => {
-      let createdByName = "";
-      let updatedByName = undefined;
-      switch (chemical.createdBy.role) {
+    const getActorName = (
+      actor: {
+        role: string;
+        username: string;
+        laboran: { full_name: string } | null;
+      } | null,
+    ) => {
+      if (!actor) return "";
+
+      switch (actor.role) {
         case "ADMIN":
-          createdByName = "Administrator";
-          updatedByName = chemical.updatedBy ? "Administrator" : "";
-          break;
+          return "Administrator";
         case "LABORAN":
-          createdByName = chemical.createdBy.laboran?.full_name || "";
-          updatedByName = chemical.updatedBy
-            ? chemical.updatedBy.laboran?.full_name
-            : "";
-          break;
         case "PETUGAS_GUDANG":
-          createdByName = chemical.createdBy.laboran?.full_name || "";
-          updatedByName = chemical.updatedBy
-            ? chemical.updatedBy.laboran?.full_name
-            : "";
-          break;
+          return actor.laboran?.full_name || actor.username || "Tidak diketahui";
         default:
-          createdByName = "Tidak diketahui";
-          break;
+          return actor.username || "Tidak diketahui";
       }
+    };
+
+    const formattedChemicals = chemicals.map((chemical) => {
+      const createdByName = getActorName(chemical.createdBy);
+      const updatedByName = getActorName(chemical.updatedBy);
 
       return {
         id: chemical.id,
         name: chemical.name,
-        formula: chemical.formula,
+        formula: chemical.formula ?? "",
         form: chemical.form,
         characteristic: chemical.characteristic,
         stock: chemical.currentStock,
         unit: chemical.unit,
-        purchase_date: chemical.purchaseDate?.toISOString(),
-        expiration_date: chemical.expirationDate?.toISOString(),
-        created_by: createdByName,
-        updated_by: updatedByName,
-        created_at: chemical.createdAt.toISOString(),
-        updated_at: chemical.updatedAt.toISOString(),
-        sds_count: chemical.safetyDataSheet ? 1 : 0,
-        borrowing_count: chemical.borrowings.length,
-        usage_count: chemical.usageHistory.length,
+        purchaseDate: chemical.purchaseDate?.toISOString() ?? null,
+        expirationDate: chemical.expirationDate?.toISOString() ?? null,
+        createdBy: createdByName,
+        updatedBy: updatedByName,
+        createdAt: chemical.createdAt.toISOString(),
+        updatedAt: chemical.updatedAt.toISOString(),
+        sdsCount: chemical.safetyDataSheet ? 1 : 0,
+        borrowingCount: chemical._count.borrowings,
+        usageCount: chemical._count.usageHistory,
       };
     });
 

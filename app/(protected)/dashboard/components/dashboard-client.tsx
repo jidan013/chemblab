@@ -45,7 +45,7 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ user }) => {
         activeBorrowings: data.activeBorrowings,
       });
 
-      const mappedActivities: MappedActivity[] = data.recentActivities.map(
+      const mappedActivities: MappedActivity[] = (data.recentActivities ?? []).map(
         (act) => ({
           id: act.id,
           type: act.status,
