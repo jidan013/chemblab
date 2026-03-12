@@ -8,14 +8,10 @@ export const middleware = (request: NextRequest) => {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("access_token")?.value;
 
-  console.log("Current path:", pathname);
-  console.log("Token found:", !!token);
-
   if (pathname === "/") return NextResponse.next();
 
   // cek apakah token ada dan token apakah sudah expired
   if (token && isTokenExpiredRuntimeEdge(token)) {
-    console.log("Token is expired. Deleting cookie and redirecting to /login.");
     const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete("access_token");
     return response;
