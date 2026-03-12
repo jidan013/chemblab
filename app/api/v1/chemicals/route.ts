@@ -3,8 +3,35 @@ import { type NextRequest, NextResponse } from "next/server";
 import db from "@/lib/db";
 import { requireRoleOrNull } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Endpoint ringan untuk dashboard/statistik.
+    // Hindari query list bahan kimia lengkap saat hanya butuh angka agregat.
+    const { searchParams } = new URL(request.url);
+    const statsOnly = searchParams.get("statsOnly") === "1";
+
+    if (statsOnly) {
+      const now = new Date();
+      const [totalChemicals, lowStockChemicals, expiringChemicals] =
+        await Promise.all([
+          db.chemical.count(),
+          db.chemical.count({ where: { currentStock: { lte: 10 } } }),
+          db.chemical.count({
+            where: {
+              expirationDate: {
+                not: null,
+                lt: now,
+              },
+            },
+          }),
+        ]);
+
+      return NextResponse.json({
+        message: "Chemical stats fetched successfully",
+        stats: { totalChemicals, lowStockChemicals, expiringChemicals },
+      });
+    }
+
     const chemicals = await db.chemical.findMany({
       select: {
         id: true,

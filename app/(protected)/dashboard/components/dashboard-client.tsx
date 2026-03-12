@@ -16,11 +16,11 @@ import {
   Calendar,
   Activity,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import CardStats from "@/components/card-stats";
 import { UserAuth } from "@/types/auth";
-import useChemicals from "@/hooks/use-chemicals";
+import axios from "axios";
 
 interface DashboardClientProps {
   user: UserAuth;
@@ -28,21 +28,33 @@ interface DashboardClientProps {
 
 export const DashboardClient: React.FC<DashboardClientProps> = ({ user }) => {
   const [stats, setStats] = useState({
+    activeAllBorrowings: 0,
     activeBorrowings: 0,
+    totalChemicals: 0,
+    lowStockChemicals: 0,
+    expiringChemicals: 0,
   });
   const [activities, setActivities] = useState<MappedActivity[]>([]);
-  const { dasboardStatsChemicals } = useChemicals();
   const [isLoading, setIsLoading] = useState(false);
+  const hasFetchedRef = useRef(false);
 
   const fetchDashboard = async () => {
     try {
       setIsLoading(true);
-      const data = await getDashboardData();
+      const [data, chemicalsStatsRes] = await Promise.all([
+        getDashboardData(),
+        axios.get("/api/v1/chemicals", { params: { statsOnly: 1 } }),
+      ]);
+      const chemicalsStats = chemicalsStatsRes.data?.stats;
 
       console.log("Dashboard Data:", data);
 
       setStats({
+        activeAllBorrowings: data.activeAllBorrowings,
         activeBorrowings: data.activeBorrowings,
+        totalChemicals: chemicalsStats?.totalChemicals ?? 0,
+        lowStockChemicals: chemicalsStats?.lowStockChemicals ?? 0,
+        expiringChemicals: chemicalsStats?.expiringChemicals ?? 0,
       });
 
       const mappedActivities: MappedActivity[] = (data.recentActivities ?? []).map(
@@ -71,6 +83,8 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ user }) => {
   };
 
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
     fetchDashboard();
   }, []);
 
@@ -96,7 +110,7 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ user }) => {
               title="Total Bahan Kimia"
               icon={<Package className="h-4 w-4 text-muted-foreground" />}>
               <div className="text-2xl font-bold pt-4 sm:pt-7">
-                {dasboardStatsChemicals.totalChemicals}
+                {stats.totalChemicals}
               </div>
               <p className="text-xs text-muted-foreground">
                 bahan padat, cair dan gas
@@ -120,7 +134,7 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ user }) => {
                 title="Semua Peminjaman Aktif"
                 icon={<FileText className="h-4 w-4 text-muted-foreground" />}>
                 <div className="text-2xl font-bold pt-4 sm:pt-7">
-                  {-stats.activeBorrowings}
+                  {stats.activeAllBorrowings}
                 </div>
                 <p className="text-xs text-muted-foreground">transaksi</p>
               </CardStats>
@@ -130,7 +144,7 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ user }) => {
               title="Stok Hampir Habis"
               icon={<AlertTriangle className="h-4 w-4 text-yellow-600" />}>
               <div className="text-2xl font-bold text-yellow-600 pt-9 sm:pt-7">
-                {dasboardStatsChemicals.lowStockChemicals}
+                {stats.lowStockChemicals}
               </div>
               <p className="text-xs text-muted-foreground">item</p>
             </CardStats>
@@ -140,7 +154,7 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ user }) => {
               icon={<Calendar className="h-4 w-4 text-red-600" />}>
               <div className=" pt-4 sm:pt-7">
                 <span className="text-2xl font-bold text-red-600">
-                  {dasboardStatsChemicals.expiringChemicals}
+                  {stats.expiringChemicals}
                 </span>
                 <p className="text-xs text-muted-foreground">item</p>
               </div>
@@ -190,8 +204,8 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ user }) => {
                   <AlertTriangle className="h-4 w-4 text-red-500" />
                   <div className="flex-1">
                     <p className="text-sm font-medium">
-                      {dasboardStatsChemicals.expiringChemicals} bahan akan
-                      kadaluwarsa bulan ini
+                      {stats.expiringChemicals} bahan akan kadaluwarsa bulan
+                      ini
                     </p>
                     <p className="text-xs text-gray-500">
                       Periksa tanggal kadaluwarsa
@@ -202,8 +216,7 @@ export const DashboardClient: React.FC<DashboardClientProps> = ({ user }) => {
                   <AlertTriangle className="h-4 w-4 text-yellow-500" />
                   <div className="flex-1">
                     <p className="text-sm font-medium">
-                      {dasboardStatsChemicals.lowStockChemicals} bahan stok
-                      rendah
+                      {stats.lowStockChemicals} bahan stok rendah
                     </p>
                     <p className="text-xs text-gray-500">
                       Pertimbangkan untuk restok

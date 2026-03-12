@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const filterStatus = searchParams.get("status") || "";
     const filterUserRole = searchParams.get("userRole") || "";
+    const summaryOnly = searchParams.get("summaryOnly") === "1";
 
     const skip = (page - 1) * limit;
 
@@ -103,6 +104,52 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.BorrowingWhereInput =
       andConditions.length > 0 ? { AND: andConditions } : {};
+
+    if (summaryOnly) {
+      const [recentActivities, allActive, ownActive] = await Promise.all([
+        db.borrowing.findMany({
+          take: 5,
+          orderBy: { requestDate: "desc" },
+          select: {
+            id: true,
+            status: true,
+            requestDate: true,
+            borrower: { select: { username: true } },
+            items: {
+              take: 1,
+              select: {
+                chemical: {
+                  select: { name: true, unit: true },
+                },
+              },
+            },
+          },
+        }),
+
+        db.borrowing.count({
+          where: {
+            status: { in: ["APPROVED", "OVERDUE"] },
+          },
+        }),
+
+        db.borrowing.count({
+          where: {
+            status: { in: ["APPROVED", "OVERDUE"] },
+            borrowerId: userAccess?.userId,
+          },
+        }),
+      ]);
+
+      return NextResponse.json(
+        {
+          message: "Successfully fetched borrowing summary",
+          recentActivities,
+          allActive,
+          ownActive,
+        },
+        { status: 200 }
+      );
+    }
 
     const [
       borrowings,
