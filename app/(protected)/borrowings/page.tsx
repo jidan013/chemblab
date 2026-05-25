@@ -8,7 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default async function BorrowingsPage() {
-  await new Promise((resolve) => setTimeout(resolve, 100));
   const user = await getCurrentUser();
   if (!user) return null;
 

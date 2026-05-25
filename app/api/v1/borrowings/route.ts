@@ -23,60 +23,160 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const filterStatus = searchParams.get("status") || "";
     const filterUserRole = searchParams.get("userRole") || "";
+    const summaryOnly = searchParams.get("summaryOnly") === "1";
 
     const skip = (page - 1) * limit;
 
-    const where: Prisma.BorrowingWhereInput = {
-      AND: [
-        search
-          ? {
-              OR: [
-                {
-                  borrower: {
-                    username: { contains: search, mode: "insensitive" },
-                  },
+    const andConditions: Prisma.BorrowingWhereInput[] = [];
+
+    if (search) {
+      andConditions.push({
+        OR: [
+          {
+            borrower: {
+              username: { contains: search, mode: "insensitive" },
+            },
+          },
+          {
+            borrower: {
+              email: { contains: search, mode: "insensitive" },
+            },
+          },
+          {
+            borrower: {
+              mahasiswa: {
+                full_name: { contains: search, mode: "insensitive" },
+              },
+            },
+          },
+          {
+            borrower: {
+              dosen: {
+                full_name: { contains: search, mode: "insensitive" },
+              },
+            },
+          },
+          {
+            borrower: {
+              laboran: {
+                full_name: { contains: search, mode: "insensitive" },
+              },
+            },
+          },
+          {
+            purpose: { contains: search, mode: "insensitive" },
+          },
+          {
+            items: {
+              some: {
+                chemical: {
+                  OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { formula: { contains: search, mode: "insensitive" } },
+                  ],
                 },
-                {
-                  borrower: {
-                    email: { contains: search, mode: "insensitive" },
-                  },
+              },
+            },
+          },
+        ],
+      });
+    }
+
+    if (filterStatus) {
+      andConditions.push({
+        status: filterStatus as Prisma.EnumBorrowingStatusFilter["equals"],
+      });
+    }
+
+    if (filterUserRole) {
+      andConditions.push({
+        borrower: {
+          role: filterUserRole as Prisma.EnumRoleFilter["equals"],
+        },
+      });
+    }
+
+    if (userAccess?.role === "MAHASISWA" || userAccess?.role === "DOSEN") {
+      andConditions.push({
+        borrowerId: userAccess.userId,
+      });
+    }
+
+    const where: Prisma.BorrowingWhereInput =
+      andConditions.length > 0 ? { AND: andConditions } : {};
+
+    if (summaryOnly) {
+      const [recentActivities, allActive, ownActive] = await Promise.all([
+        db.borrowing.findMany({
+          take: 5,
+          orderBy: { requestDate: "desc" },
+          select: {
+            id: true,
+            status: true,
+            requestDate: true,
+            borrower: { select: { username: true } },
+            items: {
+              take: 1,
+              select: {
+                chemical: {
+                  select: { name: true, unit: true },
                 },
-                {
-                  items: {
-                    some: {
-                      chemical: {
-                        name: { contains: search, mode: "insensitive" },
-                      },
-                    },
-                  },
-                },
-              ],
-            }
-          : null,
-        filterStatus
-          ? { filterStatus: { contains: filterStatus, mode: "insensitive" } }
-          : null,
-        filterUserRole
-          ? {
-              filterUserRole: { contains: filterUserRole, mode: "insensitive" },
-            }
-          : null,
-      ].filter(Boolean) as Prisma.BorrowingWhereInput[],
-    };
+              },
+            },
+          },
+        }),
+
+        db.borrowing.count({
+          where: {
+            status: { in: ["APPROVED", "OVERDUE"] },
+          },
+        }),
+
+        db.borrowing.count({
+          where: {
+            status: { in: ["APPROVED", "OVERDUE"] },
+            borrowerId: userAccess?.userId,
+          },
+        }),
+      ]);
+
+      return NextResponse.json(
+        {
+          message: "Successfully fetched borrowing summary",
+          recentActivities,
+          allActive,
+          ownActive,
+        },
+        { status: 200 }
+      );
+    }
 
     const [
       borrowings,
       totalFiltered,
       total,
+      groupedStatus,
       recentActivities,
       allActive,
       ownActive,
     ] = await Promise.all([
       db.borrowing.findMany({
         where,
-        include: {
+        select: {
+          id: true,
+          borrowerId: true,
+          purpose: true,
+          status: true,
+          requestDate: true,
+          approvedAt: true,
+          returnedAt: true,
+          notes: true,
           borrower: {
-            include: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              role: true,
               dosen: { select: { full_name: true } },
               laboran: { select: { full_name: true } },
               mahasiswa: { select: { full_name: true } },
@@ -95,21 +195,27 @@ export async function GET(request: NextRequest) {
             },
           },
           approvedBy: {
-            include: {
-              admin: { select: { pin: true } },
-              laboran: { select: { nip: true, full_name: true } },
+            select: {
+              id: true,
+              role: true,
+              username: true,
+              laboran: { select: { full_name: true } },
             },
           },
           rejectedBy: {
-            include: {
-              admin: { select: { pin: true } },
-              laboran: { select: { nip: true, full_name: true } },
+            select: {
+              id: true,
+              role: true,
+              username: true,
+              laboran: { select: { full_name: true } },
             },
           },
           returnedBy: {
-            include: {
-              admin: { select: { pin: true } },
-              laboran: { select: { nip: true, full_name: true } },
+            select: {
+              id: true,
+              role: true,
+              username: true,
+              laboran: { select: { full_name: true } },
             },
           },
         },
@@ -118,33 +224,42 @@ export async function GET(request: NextRequest) {
         orderBy: { requestDate: "desc" },
       }),
 
-      // Menghitung total data yang sesuai
       db.borrowing.count({ where }),
-      // total semua data
       db.borrowing.count(),
 
-      // Mengambil 5 aktivitas terbaru
+      db.borrowing.groupBy({
+        by: ["status"],
+        where,
+        _count: {
+          _all: true,
+        },
+      }),
+
       db.borrowing.findMany({
         take: 5,
         orderBy: { requestDate: "desc" },
-        include: {
+        select: {
+          id: true,
+          status: true,
+          requestDate: true,
           borrower: { select: { username: true } },
           items: {
+            take: 1,
             select: {
-              chemical: { select: { name: true, unit: true } },
+              chemical: {
+                select: { name: true, unit: true },
+              },
             },
           },
         },
       }),
 
-      // Menghitung jumlah peminjaman aktif
       db.borrowing.count({
         where: {
           status: { in: ["APPROVED", "OVERDUE"] },
         },
       }),
 
-      // Menghitung jumlah peminjaman aktif yang dibuat oleh user
       db.borrowing.count({
         where: {
           status: { in: ["APPROVED", "OVERDUE"] },
@@ -153,60 +268,50 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    const getActorName = (
+      actor:
+        | {
+            role: string;
+            username: string;
+            laboran: { full_name: string } | null;
+          }
+        | null
+        | undefined
+    ) => {
+      if (!actor) return undefined;
+      if (actor.role === "ADMIN") return "Administrator";
+      return actor.laboran?.full_name || actor.username;
+    };
+
+    const getBorrowerName = (borrowing: (typeof borrowings)[number]) => {
+      if (borrowing.borrower.role === "ADMIN") return "Administrator";
+      return (
+        borrowing.borrower.mahasiswa?.full_name ||
+        borrowing.borrower.dosen?.full_name ||
+        borrowing.borrower.laboran?.full_name ||
+        borrowing.borrower.username ||
+        "GUEST"
+      );
+    };
+
     const formattedBorrowings = borrowings.map((borrowing) => {
-      let approvedByName = undefined;
-      let rejectedByName = undefined;
-      let returnedByName = undefined;
-      let name = undefined;
-      switch (borrowing.borrower.role) {
-        case "ADMIN":
-          approvedByName = "Administrator";
-          rejectedByName = "Administrator";
-          returnedByName = "Administrator";
-          name = "Administrator";
-          break;
-        case "LABORAN":
-          approvedByName = borrowing.approvedBy?.laboran?.full_name;
-          rejectedByName = borrowing.rejectedBy?.laboran?.full_name;
-          returnedByName = borrowing.returnedBy?.laboran?.full_name;
-
-          name = borrowing.borrower.laboran?.full_name;
-          break;
-        case "PETUGAS_GUDANG":
-          approvedByName = borrowing.approvedBy?.laboran?.full_name;
-          rejectedByName = borrowing.rejectedBy?.laboran?.full_name;
-          returnedByName = borrowing.returnedBy?.laboran?.full_name;
-
-          name = borrowing.borrower.laboran?.full_name;
-          break;
-        case "DOSEN":
-          name = borrowing.borrower.dosen?.full_name;
-          break;
-        case "MAHASISWA":
-          name = borrowing.borrower.mahasiswa?.full_name;
-          break;
-        default:
-          name = "GUEST";
-          break;
-      }
-
       return {
         id: borrowing.id,
         borrowerId: borrowing.borrowerId,
         borrower: {
           id: borrowing.borrower.id,
-          name: name,
+          name: getBorrowerName(borrowing),
           email: borrowing.borrower.email,
           role: borrowing.borrower.role,
         },
         purpose: borrowing.purpose,
         status: borrowing.status,
-        requestDate: borrowing.requestDate.toISOString().split("T")[0],
+        requestDate: borrowing.requestDate.toISOString(),
         approvedAt: borrowing.approvedAt
-          ? borrowing.approvedAt.toISOString().split("T")[0]
+          ? borrowing.approvedAt.toISOString()
           : null,
         returnedAt: borrowing.returnedAt
-          ? borrowing.returnedAt.toISOString().split("T")[0]
+          ? borrowing.returnedAt.toISOString()
           : null,
         notes: borrowing.notes,
         items: borrowing.items.map((item) => ({
@@ -224,25 +329,39 @@ export async function GET(request: NextRequest) {
         })),
         approvedBy: {
           userId: borrowing.approvedBy?.id,
-          name: approvedByName,
+          name: getActorName(borrowing.approvedBy),
         },
         rejectedBy: {
           userId: borrowing.rejectedBy?.id,
-          name: rejectedByName,
+          name: getActorName(borrowing.rejectedBy),
         },
         returnedBy: {
           userId: borrowing.returnedBy?.id,
-          name: returnedByName,
+          name: getActorName(borrowing.returnedBy),
         },
       };
     });
 
+    const statusCounts = groupedStatus.reduce(
+      (acc, row) => {
+        acc[row.status] = row._count._all;
+        return acc;
+      },
+      {
+        PENDING: 0,
+        APPROVED: 0,
+        REJECTED: 0,
+        RETURNED: 0,
+        OVERDUE: 0,
+      } as Record<string, number>
+    );
+
     return NextResponse.json(
       {
         message: "Successfully fetched borrowings",
-        borrowings: borrowings,
         formattedBorrowings,
         totalFiltered,
+        statusCounts,
         recentActivities,
         allActive,
         ownActive,
@@ -250,7 +369,7 @@ export async function GET(request: NextRequest) {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit),
+          pages: Math.ceil(totalFiltered / limit),
         },
       },
       { status: 200 }

@@ -5,12 +5,15 @@ import React from "react";
 import { Button } from "../ui/button";
 import { LogOut } from "lucide-react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 
 interface SidebarFooterProps {
   user: UserAuth | null;
 }
 
 const SidebarFooter = ({ user }: SidebarFooterProps) => {
+  const router = useRouter();
+
   const getRoleLabel = (role: string) => {
     switch (role) {
       case "ADMIN":
@@ -30,13 +33,15 @@ const SidebarFooter = ({ user }: SidebarFooterProps) => {
 
   const handleLogout = async () => {
     try {
-      await axios.post("/api/v1/auth/logout", {
+      await axios.post("/api/v1/auth/logout", null, {
         withCredentials: true,
       });
-      window.location.href = "/login";
+      router.replace("/login");
+      router.refresh();
     } catch (error) {
       console.error("Logout error:", error);
-      window.location.href = "/login";
+      router.replace("/login");
+      router.refresh();
     }
   };
 

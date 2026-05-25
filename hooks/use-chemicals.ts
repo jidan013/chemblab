@@ -2,7 +2,7 @@ import { Chemical } from "@/types/chemicals";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "./use-toast";
 import axios from "axios";
-import { convertSnakeToCamel } from "@/helpers/case";
+import { useDebounce } from "./use-debounce";
 
 const useChemicals = () => {
   const [chemicals, setChemicals] = useState<Chemical[]>([]);
@@ -19,17 +19,13 @@ const useChemicals = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   const { toast } = useToast();
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const fetchChemicals = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await axios.get("/api/v1/chemicals");
-
-      const chemicalsCamelCase = convertSnakeToCamel<Chemical[]>(
-        data.chemicals
-      );
-
-      setChemicals(chemicalsCamelCase);
+      setChemicals(data.chemicals);
     } catch (error) {
       console.error("Gagal memuat data bahan kimia: ", error);
       toast({
@@ -82,10 +78,12 @@ const useChemicals = () => {
   };
 
   const filteredChemicals = useMemo(() => {
+    const search = debouncedSearchTerm.toLowerCase();
+
     return chemicals.filter((chemical) => {
       const matchesSearch =
-        chemical.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        chemical.formula.toLowerCase().includes(searchTerm.toLowerCase());
+        chemical.name.toLowerCase().includes(search) ||
+        (chemical.formula || "").toLowerCase().includes(search);
 
       const matchesForm = filterForm === "all" || chemical.form === filterForm;
 
@@ -98,7 +96,7 @@ const useChemicals = () => {
 
       return matchesSearch && matchesForm && matchesLocation;
     });
-  }, [chemicals, searchTerm, filterForm, filterCharacteristic]);
+  }, [chemicals, debouncedSearchTerm, filterForm, filterCharacteristic]);
 
   const dasboardStatsChemicals = useMemo(() => {
     const totalChemicals = chemicals.length;
@@ -115,10 +113,18 @@ const useChemicals = () => {
 
   // pagination di frontend
   const totalPages = Math.ceil(filteredChemicals.length / pageSize);
-  const paginatedChemicals = filteredChemicals.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
+  const paginatedChemicals = useMemo(
+    () =>
+      filteredChemicals.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+      ),
+    [filteredChemicals, currentPage]
   );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, filterForm, filterCharacteristic]);
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > totalPages) return;
