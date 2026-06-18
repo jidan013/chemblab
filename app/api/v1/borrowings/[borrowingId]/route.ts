@@ -3,6 +3,8 @@ import db from "@/lib/db";
 import { requireRoleOrNull } from "@/lib/auth";
 import { BorrowingStatus, UsageHistory } from "@/types/borrowings";
 
+const MAX_ITEMS_PER_BORROWING = 25;
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ borrowingId: string }> }
@@ -103,6 +105,17 @@ export async function PATCH(
 
     switch (action) {
       case "APPROVED": {
+        // Batasi jumlah bahan kimia per peminjaman, agar transaksi tetap
+        // ringan dan tidak berisiko timeout di production.
+        if (borrowing.items.length > MAX_ITEMS_PER_BORROWING) {
+          return NextResponse.json(
+            {
+              error: `Peminjaman ini memiliki ${borrowing.items.length} bahan kimia, melebihi batas maksimal ${MAX_ITEMS_PER_BORROWING} bahan per peminjaman`,
+            },
+            { status: 400 }
+          );
+        }
+
         // Validasi stok awal (fail-fast). Pengecekan ulang yang lebih
         // ketat (anti race-condition) dilakukan lagi di dalam transaksi.
         for (const item of borrowing.items) {
@@ -236,6 +249,15 @@ export async function PATCH(
             {
               error:
                 "Data pengembalian harus berupa array dan tidak boleh kosong",
+            },
+            { status: 400 }
+          );
+        }
+
+        if (returnedItems.length > MAX_ITEMS_PER_BORROWING) {
+          return NextResponse.json(
+            {
+              error: `Jumlah item pengembalian (${returnedItems.length}) melebihi batas maksimal ${MAX_ITEMS_PER_BORROWING} bahan per peminjaman`,
             },
             { status: 400 }
           );
