@@ -144,9 +144,17 @@ export function BorrowingTable({
     } catch (error) {
       console.error("Error change status: ", error);
 
+      // Ambil pesan error asli dari response server jika tersedia,
+      // supaya pengguna tahu alasan spesifik kegagalan
+      // (mis. "Stok tidak mencukupi", "melebihi batas 25 bahan", dll)
+      const errorMessage =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : "Gagal memperbarui status peminjaman";
+
       toast({
         title: "Error ❌",
-        description: "Gagal memperbarui status peminjaman",
+        description: errorMessage,
         variant: "destructive",
       });
     }
